@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  notifier:
+    image: "ghcr.io/4350pchris/gh-issue-notifier"
+    build: .
+    environment:
+      SHOUTRRR_URL: "${SHOUTRRR_URL}"
+      INTERVAL: "${INTERVAL}"
+      OWNER: "${OWNER}"
+      REPOSITORY: "${REPOSITORY}"
+      LABELS: "${LABELS}"
