@@ -1,0 +1,7 @@
+patterns:
+  - owner: "elk-zone"
+    repo: "elk"
+    label: "good first issue"
+  - owner: "sveltejs"
+    repo: "kit"
+    label: "low hanging fruit"

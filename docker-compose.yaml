@@ -7,6 +7,6 @@ services:
     environment:
       SHOUTRRR_URL: "${SHOUTRRR_URL}"
       INTERVAL: "${INTERVAL}"
-      WATCH_PATTERNS: "${WATCH_PATTERNS}"
     volumes:
+      - ./patterns.yaml:/patterns.yaml
       - ./issues.txt:/issues.txt
