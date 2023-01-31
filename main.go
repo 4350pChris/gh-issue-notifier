@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -76,19 +75,33 @@ func sendIssuesViaMail(issues []*github.Issue) error {
 func getIssuesToSend() ([]*github.Issue, error) {
 	client := github.NewClient(nil)
 
-	owner := os.Getenv("OWNER")
-	repo := os.Getenv("REPOSITORY")
-	labels := strings.Split(os.Getenv("LABELS"), ",")
+	patterns := strings.Split(os.Getenv("WATCH_PATTERNS"), ",")
 
-	issues, _, err := client.Issues.ListByRepo(context.Background(), owner, repo, &github.IssueListByRepoOptions{Labels: labels})
+	allIssues := []*github.Issue{}
 
-	fmt.Printf("Found %d issues\n", len(issues))
+	fmt.Println(patterns)
 
-	if err != nil {
-		return nil, err
+	for _, pattern := range patterns {
+
+		splitPattern := strings.Split(pattern, "/")
+
+		if len(splitPattern) != 3 {
+			return nil, fmt.Errorf("invalid watch pattern %v", pattern)
+		}
+
+		owner, repo, label := splitPattern[0], splitPattern[1], splitPattern[2]
+
+		issues, _, err := client.Issues.ListByRepo(context.Background(), owner, repo, &github.IssueListByRepoOptions{Labels: []string{label}})
+		if err != nil {
+			return nil, err
+		}
+
+		allIssues = append(allIssues, issues...)
 	}
 
-	issuesToSend, err := filterSentIssues(issues)
+	fmt.Printf("Found %d issues\n", len(allIssues))
+
+	issuesToSend, err := filterSentIssues(allIssues)
 
 	if err != nil {
 		return nil, err
@@ -116,7 +129,7 @@ func filterSentIssues(issues []*github.Issue) ([]*github.Issue, error) {
 	for _, issue := range issues {
 		found := false
 		for _, line := range readIds {
-			if strconv.Itoa(*issue.Number) == line {
+			if *issue.URL == line {
 				found = true
 			}
 		}
@@ -134,7 +147,7 @@ func appendIssue(issue *github.Issue) error {
 		return err
 	}
 
-	content = append(content, []byte(strconv.Itoa(*issue.Number)+",")...)
+	content = append(content, []byte(*issue.URL+",")...)
 
 	err = os.WriteFile("issues.txt", content, 0644)
 

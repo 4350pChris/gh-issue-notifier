@@ -7,8 +7,6 @@ services:
     environment:
       SHOUTRRR_URL: "${SHOUTRRR_URL}"
       INTERVAL: "${INTERVAL}"
-      OWNER: "${OWNER}"
-      REPOSITORY: "${REPOSITORY}"
-      LABELS: "${LABELS}"
+      WATCH_PATTERNS: "${WATCH_PATTERNS}"
     volumes:
       - ./issues.txt:/issues.txt

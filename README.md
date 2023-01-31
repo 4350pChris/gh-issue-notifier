@@ -12,10 +12,8 @@ Following environment variables are required, a good idea would be to put them i
 
 ```text
 SHOUTRRR_URL=<your shoutrrr url>
-INTERVAL=10s
-OWNER=<repository owner>
-REPOSITORY=<repository name>
-LABELS=good first issue
+INTERVAL=10m
+WATCH_PATTERNS=<owner>/<repository>/<label>,<owner>/<repository>/<label>
 ```
 
 You can use the provided docker image either with the compose file found in this repository or start the container from the command line via `docker run --rm --env-file .env -v $(pwd)/issues.txt:/issues.txt ghcr.io/4350pchris/gh-issue-notifier`
