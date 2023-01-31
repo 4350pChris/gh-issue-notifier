@@ -15,6 +15,11 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
+type Sendable struct {
+	repo   string
+	issues []*github.Issue
+}
+
 func main() {
 	for {
 		err := doWork()
@@ -34,37 +39,44 @@ func main() {
 }
 
 func doWork() error {
-	issuesToSend, err := getIssuesToSend()
+	sendables, err := getIssuesToSend()
 
 	if err != nil {
 		return err
 	}
 
-	if len(issuesToSend) == 0 {
+	if len(sendables) == 0 {
 		fmt.Println("No issues to send")
 		return nil
 	}
 
-	err = sendIssuesViaMail(issuesToSend)
+	err = sendIssuesViaMail(sendables)
 
 	if err != nil {
 		return err
 	}
 
-	for _, issue := range issuesToSend {
-		err = appendIssue(issue)
-		if err != nil {
-			return err
+	// save all issues to txt file
+	for _, sendable := range sendables {
+		for _, issue := range sendable.issues {
+			err = appendIssue(issue)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func sendIssuesViaMail(issues []*github.Issue) error {
+func sendIssuesViaMail(sendables []Sendable) error {
 	formatted := ""
 
-	for _, issue := range issues {
-		formatted += fmt.Sprintf("%d. %v - %v\n", *issue.Number, *issue.Title, issue.GetHTMLURL())
+	for _, sendable := range sendables {
+		formatted += fmt.Sprintf("Repo: %v\n", sendable.repo)
+		for _, issue := range sendable.issues {
+			formatted += fmt.Sprintf("%d. %v - %v\n", *issue.Number, *issue.Title, issue.GetHTMLURL())
+		}
+		formatted += "\n"
 	}
 
 	url := os.Getenv("SHOUTRRR_URL")
@@ -72,14 +84,12 @@ func sendIssuesViaMail(issues []*github.Issue) error {
 	return shoutrrr.Send(url, formatted)
 }
 
-func getIssuesToSend() ([]*github.Issue, error) {
+func getIssuesToSend() ([]Sendable, error) {
 	client := github.NewClient(nil)
 
 	patterns := strings.Split(os.Getenv("WATCH_PATTERNS"), ",")
 
-	allIssues := []*github.Issue{}
-
-	fmt.Println(patterns)
+	sendables := []Sendable{}
 
 	for _, pattern := range patterns {
 
@@ -96,25 +106,25 @@ func getIssuesToSend() ([]*github.Issue, error) {
 			return nil, err
 		}
 
-		allIssues = append(allIssues, issues...)
+		issuesToSend, err := filterSentIssues(issues)
+		if err != nil {
+			return nil, err
+		}
+
+		// skip repos that have no new issues
+		if len(issuesToSend) > 0 {
+			sendables = append(sendables, Sendable{repo: repo, issues: issuesToSend})
+		}
 	}
 
-	fmt.Printf("Found %d issues\n", len(allIssues))
-
-	issuesToSend, err := filterSentIssues(allIssues)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return issuesToSend, nil
+	return sendables, nil
 }
 
 func filterSentIssues(issues []*github.Issue) ([]*github.Issue, error) {
 	content, err := os.ReadFile("issues.txt")
 
 	if err != nil && errors.Is(err, fs.ErrNotExist) {
-		fmt.Print("Creating issues.txt file... ")
+		fmt.Println("Creating issues.txt file... ")
 		err = os.WriteFile("issues.txt", []byte(""), 0644)
 	}
 
