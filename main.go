@@ -9,35 +9,56 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/containrrr/shoutrrr"
 	"github.com/google/go-github/v50/github"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
+	for {
+		err := doWork()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		duration, err := time.ParseDuration(os.Getenv("INTERVAL"))
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf("Sleeping for %v\n", duration)
+		time.Sleep(duration)
+	}
+}
+
+func doWork() error {
 	issuesToSend, err := getIssuesToSend()
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if len(issuesToSend) == 0 {
 		fmt.Println("No issues to send")
-		return
+		return nil
 	}
 
 	err = sendIssuesViaMail(issuesToSend)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for _, issue := range issuesToSend {
 		err = appendIssue(issue)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
+	return nil
 }
 
 func sendIssuesViaMail(issues []*github.Issue) error {
@@ -55,7 +76,13 @@ func sendIssuesViaMail(issues []*github.Issue) error {
 func getIssuesToSend() ([]*github.Issue, error) {
 	client := github.NewClient(nil)
 
-	issues, _, err := client.Issues.ListByRepo(context.Background(), "elk-zone", "elk", &github.IssueListByRepoOptions{Labels: []string{"good first issue"}})
+	owner := os.Getenv("OWNER")
+	repo := os.Getenv("REPOSITORY")
+	labels := strings.Split(os.Getenv("LABELS"), ",")
+
+	issues, _, err := client.Issues.ListByRepo(context.Background(), owner, repo, &github.IssueListByRepoOptions{Labels: labels})
+
+	fmt.Printf("Found %d issues\n", len(issues))
 
 	if err != nil {
 		return nil, err
