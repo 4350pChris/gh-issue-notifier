@@ -4,14 +4,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/go-github/v50/github"
 	_ "github.com/joho/godotenv/autoload"
 )
-
-type Sendable struct {
-	repo   string
-	issues []*github.Issue
-}
 
 func main() {
 	config := GetConfig()
@@ -27,30 +21,36 @@ func main() {
 }
 
 func doWork(config Config) error {
-	sendables, err := GetIssuesToSend(config.Patterns)
+	repos, err := GetReposWithIssues(config.Patterns)
 
 	if err != nil {
 		return err
 	}
 
-	if len(sendables) == 0 {
+	if len(repos) == 0 {
 		log.Default().Println("No issues to send")
 		return nil
 	}
 
-	err = NotifyOfIssues(config.ShoutrrrUrl, sendables)
+	for _, repo := range repos {
+		issuesToSend, err := filterSentIssues(repo)
+		if err != nil {
+			return err
+		}
+		// replace issues with only the ones that need to be sent
+		repo.issues = issuesToSend
+	}
+	err = NotifyOfIssues(config.ShoutrrrUrl, repos)
 
 	if err != nil {
 		return err
 	}
 
-	// save all issues to txt file
-	for _, sendable := range sendables {
-		for _, issue := range sendable.issues {
-			err = RememberIssue(issue)
-			if err != nil {
-				return err
-			}
+	for _, repo := range repos {
+		err = StoreIssues(repo)
+		if err != nil {
+			log.Default().Printf("Error storing issues for repo %v: %v", repo.fullName, err)
+			return err
 		}
 	}
 	return nil

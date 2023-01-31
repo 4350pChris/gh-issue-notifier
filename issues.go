@@ -2,87 +2,79 @@ package main
 
 import (
 	"context"
-	"errors"
-	"io/fs"
 	"log"
-	"os"
-	"strings"
 
 	"github.com/google/go-github/v50/github"
 )
 
-func GetIssuesToSend(patterns []WatchPattern) ([]Sendable, error) {
+func GetReposWithIssues(patterns []WatchPattern) ([]*Repository, error) {
 	client := github.NewClient(nil)
 
-	sendables := []Sendable{}
+	repos := []*Repository{}
 
 	for _, pattern := range patterns {
+
+		repo, _, err := client.Repositories.Get(context.Background(), pattern.Owner, pattern.Repo)
+		if err != nil {
+			return nil, err
+		}
 
 		issues, _, err := client.Issues.ListByRepo(context.Background(), pattern.Owner, pattern.Repo, &github.IssueListByRepoOptions{Labels: []string{pattern.Label}})
 		if err != nil {
 			return nil, err
 		}
 
-		issuesToSend, err := filterSentIssues(issues)
+		dbRepo := ghIssuesToDbRepo(repo, issues)
+
+		issuesToSend, err := filterSentIssues(dbRepo)
 		if err != nil {
 			return nil, err
 		}
 
 		log.Default().Printf("Found %d issues for %s, out of which %d are new", len(issues), pattern.Repo, len(issuesToSend))
 
-		// skip repos that have no new issues
-		if len(issuesToSend) > 0 {
-			sendables = append(sendables, Sendable{repo: pattern.Repo, issues: issuesToSend})
+		// skip repos that have no fitting issues
+		if len(issues) > 0 {
+			repos = append(repos, dbRepo)
 		}
 	}
 
-	return sendables, nil
+	return repos, nil
 }
 
-func filterSentIssues(issues []*github.Issue) ([]*github.Issue, error) {
-	content, err := os.ReadFile("issues.txt")
-
-	if err != nil && errors.Is(err, fs.ErrNotExist) {
-		log.Default().Println("Creating issues.txt file... ")
-		err = os.WriteFile("issues.txt", []byte(""), 0644)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	readIds := strings.Split(string(content), ",")
-
-	issuesToSend := []*github.Issue{}
+func ghIssuesToDbRepo(repo *github.Repository, issues []*github.Issue) *Repository {
+	convertedIssues := []Issue{}
 
 	for _, issue := range issues {
-		found := false
-		for _, line := range readIds {
-			if *issue.URL == line {
-				found = true
-			}
+		convertedIssues = append(convertedIssues, Issue{
+			id:     issue.GetID(),
+			title:  issue.GetTitle(),
+			number: issue.GetNumber(),
+			repoId: issue.GetRepository().GetID(),
+		})
+	}
+
+	return &Repository{
+		id:          repo.GetID(),
+		fullName:    repo.GetFullName(),
+		description: repo.GetDescription(),
+		htmlUrl:     repo.GetHTMLURL(),
+		issues:      convertedIssues,
+	}
+}
+
+func filterSentIssues(repo *Repository) ([]Issue, error) {
+	issuesToSend := []Issue{}
+
+	for _, issue := range repo.issues {
+		found, err := IssueExists(issue)
+		if err != nil {
+			return nil, err
 		}
+
 		if !found {
 			issuesToSend = append(issuesToSend, issue)
 		}
 	}
 	return issuesToSend, nil
-}
-
-func RememberIssue(issue *github.Issue) error {
-	content, err := os.ReadFile("issues.txt")
-
-	if err != nil {
-		return err
-	}
-
-	content = append(content, []byte(*issue.URL+",")...)
-
-	err = os.WriteFile("issues.txt", content, 0644)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
