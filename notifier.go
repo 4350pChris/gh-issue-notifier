@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/containrrr/shoutrrr"
 )
@@ -16,6 +17,8 @@ func NotifyOfIssues(url string, sendables []Sendable) error {
 		}
 		formatted += "\n"
 	}
+
+	log.Default().Println("Sending notification...")
 
 	return shoutrrr.Send(url, formatted)
 }

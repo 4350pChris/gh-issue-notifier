@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"strings"
 
@@ -28,6 +28,8 @@ func GetIssuesToSend(patterns []WatchPattern) ([]Sendable, error) {
 			return nil, err
 		}
 
+		log.Default().Printf("Found %d issues for %s, out of which %d are new", len(issues), pattern.Repo, len(issuesToSend))
+
 		// skip repos that have no new issues
 		if len(issuesToSend) > 0 {
 			sendables = append(sendables, Sendable{repo: pattern.Repo, issues: issuesToSend})
@@ -41,7 +43,7 @@ func filterSentIssues(issues []*github.Issue) ([]*github.Issue, error) {
 	content, err := os.ReadFile("issues.txt")
 
 	if err != nil && errors.Is(err, fs.ErrNotExist) {
-		fmt.Println("Creating issues.txt file... ")
+		log.Default().Println("Creating issues.txt file... ")
 		err = os.WriteFile("issues.txt", []byte(""), 0644)
 	}
 

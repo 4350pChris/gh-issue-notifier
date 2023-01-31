@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -22,7 +21,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("Sleeping for %v\n", config.Interval)
+		log.Default().Printf("Sleeping for %v\n", config.Interval)
 		time.Sleep(config.Interval)
 	}
 }
@@ -35,7 +34,7 @@ func doWork(config Config) error {
 	}
 
 	if len(sendables) == 0 {
-		fmt.Println("No issues to send")
+		log.Default().Println("No issues to send")
 		return nil
 	}
 
