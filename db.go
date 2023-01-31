@@ -30,7 +30,7 @@ func getDbConnection() (*sql.DB, error) {
 	}
 
 	createTableStmt := `create table if not exists repositories (id integer not null primary key, full_name text not null, description text, html_url text);
-	create table if not exists issues (id integer not null primary key, title text, number integer, repository_id integer, foreign key (repository_id) references repositories(id) );`
+	create table if not exists issues (id integer not null primary key, title text, number integer, html_url text, repository_id integer, foreign key (repository_id) references repositories(id) );`
 
 	_, err = db.Exec(createTableStmt)
 	if err != nil {
@@ -106,7 +106,7 @@ func StoreIssues(repo *Repository) error {
 	}
 	defer repoStmt.Close()
 
-	issueStmt, err := tx.Prepare("insert into issues (id, repository_id, title, number) values (?, ?, ?, ?)")
+	issueStmt, err := tx.Prepare("insert into issues (id, repository_id, title, number, html_url) values (?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func StoreIssues(repo *Repository) error {
 		if err != nil {
 			return err
 		}
-		_, err = issueStmt.Exec(issue.Id, repo.Id, issue.Title, issue.Number)
+		_, err = issueStmt.Exec(issue.Id, repo.Id, issue.Title, issue.Number, issue.HtmlUrl)
 		if err != nil {
 			return err
 		}
