@@ -7,6 +7,8 @@ services:
     environment:
       SHOUTRRR_URL: "${SHOUTRRR_URL}"
       INTERVAL: "${INTERVAL}"
+    ports: 
+      - "8080:8080"
     volumes:
       - ./patterns.yaml:/patterns.yaml
       - ./issues.txt:/issues.txt
