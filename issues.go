@@ -47,26 +47,27 @@ func ghIssuesToDbRepo(repo *github.Repository, issues []*github.Issue) *Reposito
 
 	for _, issue := range issues {
 		convertedIssues = append(convertedIssues, Issue{
-			id:     issue.GetID(),
-			title:  issue.GetTitle(),
-			number: issue.GetNumber(),
-			repoId: issue.GetRepository().GetID(),
+			Id:      issue.GetID(),
+			Title:   issue.GetTitle(),
+			Number:  issue.GetNumber(),
+			RepoId:  issue.GetRepository().GetID(),
+			HtmlUrl: issue.GetHTMLURL(),
 		})
 	}
 
 	return &Repository{
-		id:          repo.GetID(),
-		fullName:    repo.GetFullName(),
-		description: repo.GetDescription(),
-		htmlUrl:     repo.GetHTMLURL(),
-		issues:      convertedIssues,
+		Id:          repo.GetID(),
+		FullName:    repo.GetFullName(),
+		Description: repo.GetDescription(),
+		HtmlUrl:     repo.GetHTMLURL(),
+		Issues:      convertedIssues,
 	}
 }
 
 func filterSentIssues(repo *Repository) ([]Issue, error) {
 	issuesToSend := []Issue{}
 
-	for _, issue := range repo.issues {
+	for _, issue := range repo.Issues {
 		found, err := IssueExists(issue)
 		if err != nil {
 			return nil, err

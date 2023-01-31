@@ -8,7 +8,16 @@ import (
 )
 
 func main() {
+	log.Default().Println("Starting server")
 	config := GetConfig()
+
+	go loop(config)
+
+	err := StartServer()
+	log.Default().Print(err)
+}
+
+func loop(config Config) {
 	for {
 		err := doWork(config)
 		if err != nil {
@@ -38,7 +47,7 @@ func doWork(config Config) error {
 			return err
 		}
 		// replace issues with only the ones that need to be sent
-		repo.issues = issuesToSend
+		repo.Issues = issuesToSend
 	}
 	err = NotifyOfIssues(config.ShoutrrrUrl, repos)
 
@@ -49,7 +58,7 @@ func doWork(config Config) error {
 	for _, repo := range repos {
 		err = StoreIssues(repo)
 		if err != nil {
-			log.Default().Printf("Error storing issues for repo %v: %v", repo.fullName, err)
+			log.Default().Printf("Error storing issues for repo %v: %v", repo.FullName, err)
 			return err
 		}
 	}

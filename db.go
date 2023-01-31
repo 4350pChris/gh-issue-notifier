@@ -8,19 +8,19 @@ import (
 )
 
 type Issue struct {
-	id      int64
-	title   string
-	number  int
-	repoId  int64
-	htmlUrl string
+	Id      int64
+	Title   string
+	Number  int
+	RepoId  int64
+	HtmlUrl string
 }
 
 type Repository struct {
-	id          int64
-	fullName    string
-	description string
-	htmlUrl     string
-	issues      []Issue
+	Id          int64
+	FullName    string
+	Description string
+	HtmlUrl     string
+	Issues      []Issue
 }
 
 func getDbConnection() (*sql.DB, error) {
@@ -41,12 +41,38 @@ func getDbConnection() (*sql.DB, error) {
 	return db, nil
 }
 
-func RetrieveIssues() ([]Issue, error) {
+func RetrieveReposWithIssues() ([]Repository, error) {
 	db, err := getDbConnection()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query("select * from issues")
+	rows, err := db.Query("select * from repositories")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	repos := []Repository{}
+	for rows.Next() {
+		var repo Repository
+		err = rows.Scan(&repo.Id, &repo.FullName, &repo.Description, &repo.HtmlUrl)
+		if err != nil {
+			return nil, err
+		}
+		repo.Issues, err = RetrieveIssues(repo.Id)
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, repo)
+	}
+	return repos, nil
+}
+
+func RetrieveIssues(repoId int64) ([]Issue, error) {
+	db, err := getDbConnection()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query("select * from issues where repository_id = ?", repoId)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +80,7 @@ func RetrieveIssues() ([]Issue, error) {
 	issues := []Issue{}
 	for rows.Next() {
 		var issue Issue
-		err = rows.Scan(&issue.id, &issue.title, &issue.number, &issue.repoId)
+		err = rows.Scan(&issue.Id, &issue.Title, &issue.Number, &issue.RepoId)
 		if err != nil {
 			return nil, err
 		}
@@ -86,12 +112,12 @@ func StoreIssues(repo *Repository) error {
 	}
 	defer issueStmt.Close()
 
-	for _, issue := range repo.issues {
-		_, err := repoStmt.Exec(repo.id, repo.fullName, repo.description, repo.htmlUrl)
+	for _, issue := range repo.Issues {
+		_, err := repoStmt.Exec(repo.Id, repo.FullName, repo.Description, repo.HtmlUrl)
 		if err != nil {
 			return err
 		}
-		_, err = issueStmt.Exec(issue.id, repo.id, issue.title, issue.number)
+		_, err = issueStmt.Exec(issue.Id, repo.Id, issue.Title, issue.Number)
 		if err != nil {
 			return err
 		}
@@ -104,7 +130,7 @@ func IssueExists(issue Issue) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	rows, err := db.Query("select * from issues where id = ?", issue.id)
+	rows, err := db.Query("select * from issues where id = ?", issue.Id)
 	if err != nil {
 		return false, err
 	}
