@@ -10,3 +10,5 @@ services:
       OWNER: "${OWNER}"
       REPOSITORY: "${REPOSITORY}"
       LABELS: "${LABELS}"
+    volumes:
+      - ./issues.txt:/issues.txt

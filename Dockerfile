@@ -17,4 +17,6 @@ WORKDIR /
 
 COPY --from=build /gh-issues-notifier /gh-issues-notifier
 
+VOLUME [ "/issues.txt" ]
+
 ENTRYPOINT ["/gh-issues-notifier"]
