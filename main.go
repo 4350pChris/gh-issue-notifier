@@ -15,6 +15,11 @@ type Sendable struct {
 
 func main() {
 	config := GetConfig()
+	go loop(config)
+	StartServer(config)
+}
+
+func loop(config Config) {
 	for {
 		err := doWork(config)
 		if err != nil {
@@ -28,10 +33,23 @@ func main() {
 
 func doWork(config Config) error {
 	client := CreateClient(&config.GithubToken)
-	sendables, err := GetIssuesToSend(client, config.Patterns)
 
-	if err != nil {
-		return err
+	sendables := []Sendable{}
+
+	for _, pattern := range config.Patterns {
+
+		issues, err := GetIssuesToSend(client, pattern)
+
+		if err != nil {
+			return err
+		}
+
+		if len(issues) > 0 {
+			sendables = append(sendables, Sendable{
+				repo:   pattern.Owner + "/" + pattern.Repo,
+				issues: issues,
+			})
+		}
 	}
 
 	if len(sendables) == 0 {
@@ -39,7 +57,7 @@ func doWork(config Config) error {
 		return nil
 	}
 
-	err = NotifyOfIssues(config.ShoutrrrUrl, sendables)
+	err := NotifyOfIssues(config.ShoutrrrUrl, sendables)
 
 	if err != nil {
 		return err

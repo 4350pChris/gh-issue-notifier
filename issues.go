@@ -26,6 +26,11 @@ func CreateClient(token *string) *github.Client {
 	return github.NewClient(tc)
 }
 
+func GetRepoForPattern(client *github.Client, pattern WatchPattern) (*github.Repository, error) {
+	res, _, err := client.Repositories.Get(context.Background(), pattern.Owner, pattern.Repo)
+	return res, err
+}
+
 func GetIssuesForPattern(client *github.Client, pattern WatchPattern) ([]*github.Issue, error) {
 	issues, _, err := client.Issues.ListByRepo(context.Background(), pattern.Owner, pattern.Repo, &github.IssueListByRepoOptions{Labels: []string{pattern.Label}})
 	if err != nil {
@@ -35,30 +40,20 @@ func GetIssuesForPattern(client *github.Client, pattern WatchPattern) ([]*github
 	return issues, nil
 }
 
-func GetIssuesToSend(client *github.Client, patterns []WatchPattern) ([]Sendable, error) {
-	sendables := []Sendable{}
-
-	for _, pattern := range patterns {
-
-		issues, err := GetIssuesForPattern(client, pattern)
-		if err != nil {
-			return nil, err
-		}
-
-		issuesToSend, err := filterSentIssues(issues)
-		if err != nil {
-			return nil, err
-		}
-
-		log.Default().Printf("Found %d issues for %s, out of which %d are new", len(issues), pattern.Repo, len(issuesToSend))
-
-		// skip repos that have no new issues
-		if len(issuesToSend) > 0 {
-			sendables = append(sendables, Sendable{repo: pattern.Repo, issues: issuesToSend})
-		}
+func GetIssuesToSend(client *github.Client, pattern WatchPattern) ([]*github.Issue, error) {
+	issues, err := GetIssuesForPattern(client, pattern)
+	if err != nil {
+		return nil, err
 	}
 
-	return sendables, nil
+	issuesToSend, err := filterSentIssues(issues)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Default().Printf("Found %d issues for %s, out of which %d are new", len(issues), pattern.Repo, len(issuesToSend))
+
+	return issuesToSend, nil
 }
 
 func filterSentIssues(issues []*github.Issue) ([]*github.Issue, error) {
