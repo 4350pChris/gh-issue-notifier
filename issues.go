@@ -9,16 +9,38 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v50/github"
+	"golang.org/x/oauth2"
 )
 
-func GetIssuesToSend(patterns []WatchPattern) ([]Sendable, error) {
-	client := github.NewClient(nil)
+func CreateClient(token *string) *github.Client {
+	if token == nil {
+		return github.NewClient(nil)
+	}
 
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: *token},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	return github.NewClient(tc)
+}
+
+func GetIssuesForPattern(client *github.Client, pattern WatchPattern) ([]*github.Issue, error) {
+	issues, _, err := client.Issues.ListByRepo(context.Background(), pattern.Owner, pattern.Repo, &github.IssueListByRepoOptions{Labels: []string{pattern.Label}})
+	if err != nil {
+		return nil, err
+	}
+
+	return issues, nil
+}
+
+func GetIssuesToSend(client *github.Client, patterns []WatchPattern) ([]Sendable, error) {
 	sendables := []Sendable{}
 
 	for _, pattern := range patterns {
 
-		issues, _, err := client.Issues.ListByRepo(context.Background(), pattern.Owner, pattern.Repo, &github.IssueListByRepoOptions{Labels: []string{pattern.Label}})
+		issues, err := GetIssuesForPattern(client, pattern)
 		if err != nil {
 			return nil, err
 		}
@@ -51,7 +73,7 @@ func filterSentIssues(issues []*github.Issue) ([]*github.Issue, error) {
 		return nil, err
 	}
 
-	readIds := strings.Split(string(content), ",")
+	readIds := strings.Split(string(content), "\n")
 
 	issuesToSend := []*github.Issue{}
 
@@ -76,7 +98,7 @@ func RememberIssue(issue *github.Issue) error {
 		return err
 	}
 
-	content = append(content, []byte(*issue.URL+",")...)
+	content = append(content, []byte(*issue.URL+"\n")...)
 
 	err = os.WriteFile("issues.txt", content, 0644)
 

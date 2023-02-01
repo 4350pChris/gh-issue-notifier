@@ -22,6 +22,7 @@ type Config struct {
 	Interval    time.Duration
 	Patterns    []WatchPattern
 	ShoutrrrUrl string
+	GithubToken string
 }
 
 func parsePatterns() []WatchPattern {
@@ -57,5 +58,6 @@ func GetConfig() Config {
 		Interval:    interval,
 		Patterns:    patterns,
 		ShoutrrrUrl: os.Getenv("SHOUTRRR_URL"),
+		GithubToken: os.Getenv("GITHUB_PAT"),
 	}
 }

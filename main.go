@@ -27,7 +27,8 @@ func main() {
 }
 
 func doWork(config Config) error {
-	sendables, err := GetIssuesToSend(config.Patterns)
+	client := CreateClient(&config.GithubToken)
+	sendables, err := GetIssuesToSend(client, config.Patterns)
 
 	if err != nil {
 		return err
