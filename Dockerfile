@@ -16,8 +16,12 @@ FROM gcr.io/distroless/base-debian10
 WORKDIR /
 
 COPY --from=build /gh-issues-notifier /gh-issues-notifier
+COPY templates /templates
+COPY static /static
 
 VOLUME [ "/patterns.yaml" ]
 VOLUME [ "/issues.txt" ]
+
+EXPOSE 8080
 
 ENTRYPOINT ["/gh-issues-notifier"]

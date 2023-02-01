@@ -7,6 +7,9 @@ services:
     environment:
       SHOUTRRR_URL: "${SHOUTRRR_URL}"
       INTERVAL: "${INTERVAL}"
+      GITHUB_PAT: "${GITHUB_PAT}"
+    ports:
+      - "8080:8080"
     volumes:
       - ./patterns.yaml:/patterns.yaml
       - ./issues.txt:/issues.txt

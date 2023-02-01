@@ -13,6 +13,7 @@ Following environment variables are required, a good idea would be to put them i
 ```text
 SHOUTRRR_URL=<your shoutrrr url>
 INTERVAL=10m
+GITHUB_PAT=<your personal github token, optional>
 ```
 
 You'll also need a `patterns.yaml` file to configure the issues you want to be notified about. See [patterns.sample.yaml](./patterns.sample.yaml) for an example.
